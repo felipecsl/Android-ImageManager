@@ -1,4 +1,4 @@
-package com.felipecsl.imaging;
+package com.felipecsl.android.imaging;
 
 import java.io.IOException;
 import java.io.InputStream;

@@ -1,4 +1,4 @@
-package com.felipecsl.imaging;
+package com.felipecsl.android.imaging;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -11,23 +11,18 @@ import java.util.WeakHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
-import android.annotation.SuppressLint;
 import android.content.Context;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Color;
 import android.graphics.drawable.BitmapDrawable;
-import android.os.Build;
 import android.os.Handler;
 import android.os.Message;
 import android.support.v4.util.LruCache;
 import android.util.Log;
-import android.view.View;
-import android.view.animation.AlphaAnimation;
-import android.view.animation.Animation;
-import android.view.animation.AnimationSet;
-import android.view.animation.DecelerateInterpolator;
 import android.widget.ImageView;
+
+import com.felipecsl.android.Utils;
 
 public class ImageManager {
     /* Static members */
@@ -94,7 +89,7 @@ public class ImageManager {
                 protected int sizeOf(final String key, final Bitmap bitmap) {
                     // The cache size will be measured in bytes rather than
                     // number of items.
-                    return getSizeInBytes(bitmap) / 1024;
+                    return Utils.getSizeInBytes(bitmap) / 1024;
                 }
             };
         }
@@ -222,7 +217,7 @@ public class ImageManager {
         imageView.setImageDrawable(bitmapDrawable);
 
         if (options.fadeIn) {
-            fadeIn(imageView);
+            Utils.fadeIn(imageView);
         }
 
         if (callback != null) {
@@ -292,34 +287,5 @@ public class ImageManager {
                 }
             }
         }
-    }
-
-    private static int getSizeInBytes(Bitmap bitmap) {
-        if (Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.HONEYCOMB_MR2) {
-            return HoneycombOrHigherUtils.getSizeInBytes(bitmap);
-        }
-
-        return bitmap.getRowBytes() * bitmap.getHeight();
-    }
-
-    @SuppressLint("NewApi")
-    private static class HoneycombOrHigherUtils {
-        public static int getSizeInBytes(Bitmap bitmap) {
-            return bitmap.getByteCount();
-        }
-    }
-
-    private static void fadeIn(View view) {
-        view.clearAnimation();
-        final int fadeInDuration = 200; // 0.2s
-
-        Animation fadeIn = new AlphaAnimation(0, 1);
-        fadeIn.setInterpolator(new DecelerateInterpolator()); // add this
-        fadeIn.setDuration(fadeInDuration);
-
-        AnimationSet animation = new AnimationSet(false);
-        animation.addAnimation(fadeIn);
-        animation.setRepeatCount(1);
-        view.setAnimation(animation);
     }
 }

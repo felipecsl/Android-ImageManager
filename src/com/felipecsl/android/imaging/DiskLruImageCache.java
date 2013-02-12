@@ -1,4 +1,4 @@
-package com.felipecsl.imaging;
+package com.felipecsl.android.imaging;
 
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
@@ -8,15 +8,14 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 
-import android.annotation.SuppressLint;
 import android.content.Context;
 import android.graphics.Bitmap;
 import android.graphics.Bitmap.CompressFormat;
 import android.graphics.BitmapFactory;
-import android.os.Build;
 import android.os.Environment;
 import android.util.Log;
 
+import com.felipecsl.android.Utils;
 import com.jakewharton.DiskLruCache;
 
 /**
@@ -27,10 +26,11 @@ import com.jakewharton.DiskLruCache;
  */
 public class DiskLruImageCache {
 
+    private DiskLruCache diskCache;
+    
     private static final int IO_BUFFER_SIZE = 8 * 1024;
     private static final boolean LOG_CACHE_OPERATIONS = false;
     private static final String LOG_TAG = "DiskLruImageCache";
-    private DiskLruCache mDiskCache;
     private static CompressFormat mCompressFormat = CompressFormat.PNG;
     private static int mCompressQuality = 70;
     private static final int APP_VERSION = 1;
@@ -45,7 +45,7 @@ public class DiskLruImageCache {
     public DiskLruImageCache(Context context, String uniqueName, int diskCacheSize, CompressFormat compressFormat, int quality) {
         try {
             final File diskCacheDir = getDiskCacheDir(context, uniqueName);
-            mDiskCache = DiskLruCache.open(diskCacheDir, APP_VERSION, VALUE_COUNT, diskCacheSize);
+            diskCache = DiskLruCache.open(diskCacheDir, APP_VERSION, VALUE_COUNT, diskCacheSize);
             mCompressFormat = compressFormat;
             mCompressQuality = quality;
         } catch (IOException e) {
@@ -69,7 +69,7 @@ public class DiskLruImageCache {
         // Check if media is mounted or storage is built-in, if so, try and use
         // external cache dir
         // otherwise use internal cache dir
-        final String cachePath = Environment.getExternalStorageState() == Environment.MEDIA_MOUNTED || !isExternalStorageRemovable() ? getExternalCacheDir(context).getPath()
+        final String cachePath = Environment.getExternalStorageState() == Environment.MEDIA_MOUNTED || !Utils.isExternalStorageRemovable() ? Utils.getExternalCacheDir(context).getPath()
                 : context.getCacheDir().getPath();
 
         return new File(cachePath + File.separator + uniqueName);
@@ -79,7 +79,7 @@ public class DiskLruImageCache {
 
         DiskLruCache.Editor editor = null;
         try {
-            editor = mDiskCache.edit(key);
+            editor = diskCache.edit(key);
             if (editor == null) {
                 return;
             }
@@ -110,7 +110,7 @@ public class DiskLruImageCache {
         DiskLruCache.Snapshot snapshot = null;
         try {
 
-            snapshot = mDiskCache.get(key);
+            snapshot = diskCache.get(key);
             if (snapshot == null) {
                 return null;
             }
@@ -134,7 +134,7 @@ public class DiskLruImageCache {
         boolean contained = false;
         DiskLruCache.Snapshot snapshot = null;
         try {
-            snapshot = mDiskCache.get(key);
+            snapshot = diskCache.get(key);
             contained = snapshot != null;
         } catch (IOException e) {
             e.printStackTrace();
@@ -152,41 +152,13 @@ public class DiskLruImageCache {
             Log.v(LOG_TAG, "disk cache CLEARED");
         }
         try {
-            mDiskCache.delete();
+            diskCache.delete();
         } catch (IOException e) {
             e.printStackTrace();
         }
     }
-
-    private static boolean isExternalStorageRemovable() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.GINGERBREAD) {
-            GingerbreadOrHigherUtils.isExternalStorageRemovable();
-        }
-        return true;
-    }
-
-    @SuppressLint("NewApi")
-    private static class GingerbreadOrHigherUtils {
-        public static boolean isExternalStorageRemovable() {
-            return Environment.isExternalStorageRemovable();
-        }
-    }
-
-    private static File getExternalCacheDir(Context context) {
-        if (hasExternalCacheDir()) {
-            return context.getExternalCacheDir();
-        }
-
-        // Before Froyo we need to construct the external cache dir ourselves
-        final String cacheDir = "/Android/data/" + context.getPackageName() + "/cache/";
-        return new File(Environment.getExternalStorageDirectory().getPath() + cacheDir);
-    }
-
-    private static boolean hasExternalCacheDir() {
-        return Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.FROYO;
-    }
-
+    
     public File getCacheFolder() {
-        return mDiskCache.getDirectory();
+        return diskCache.getDirectory();
     }
 }

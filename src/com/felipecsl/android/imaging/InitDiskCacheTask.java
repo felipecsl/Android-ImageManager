@@ -1,4 +1,5 @@
-package com.felipecsl.imaging;
+package com.felipecsl.android.imaging;
+
 
 import android.content.Context;
 import android.os.AsyncTask;
