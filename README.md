@@ -32,8 +32,7 @@ public class MainActivity extends Activity {
 **Loading images**
 
 ```java
-ImageManagerOptions options = new ImageManagerOptions();
-imageManager.loadImage("http://www.roflcat.com/images/cats/bike.jpg", imageView);
+imageManager.loadImage("http://www.roflcat.com/images/cats/bike.jpg", imageView, new ImageManager.JobOptions());
 ```
 
 This library was tested with Android API Level 8 and newer.
