@@ -1,9 +1,7 @@
 package com.felipecsl.android.imaging;
 
-import java.io.IOException;
 import java.io.InputStream;
-import java.net.MalformedURLException;
-import java.net.URL;
+import java.net.ResponseCache;
 
 import android.content.Context;
 import android.graphics.Bitmap;
@@ -19,18 +17,17 @@ import android.util.Log;
 
 public class BitmapProcessor {
 
-    private static final String LOG_TAG = "BitmapProcessor";
+    private final Context context;
 
-    private Context context;
-
-    public BitmapProcessor(Context context) {
+    public BitmapProcessor(final Context context) {
         this.context = context;
+        ResponseCache.setDefault(new ImageResponseCache(context.getCacheDir()));
     }
 
-    public BitmapDrawable getRoundedCorners(BitmapDrawable drawable, int radius) {
-        Bitmap bitmap = drawable.getBitmap();
-        Bitmap output = Bitmap.createBitmap(bitmap.getWidth(), bitmap.getHeight(), Bitmap.Config.ARGB_8888);
-        Canvas canvas = new Canvas(output);
+    public BitmapDrawable getRoundedCorners(final BitmapDrawable drawable, final int radius) {
+        final Bitmap bitmap = drawable.getBitmap();
+        final Bitmap output = Bitmap.createBitmap(bitmap.getWidth(), bitmap.getHeight(), Bitmap.Config.ARGB_4444);
+        final Canvas canvas = new Canvas(output);
 
         final int color = 0xff424242;
         final Paint paint = new Paint();
@@ -51,18 +48,18 @@ public class BitmapProcessor {
 
     // Took from:
     // http://developer.android.com/training/displaying-bitmaps/load-bitmap.html
-    private static int calculateInSampleSize(BitmapFactory.Options options, int reqWidth, int reqHeight) {
+    private static int calculateInSampleSize(final BitmapFactory.Options options, final int reqWidth, final int reqHeight) {
         // Raw height and width of image
         final int height = options.outHeight;
         final int width = options.outWidth;
         int inSampleSize = 1;
 
-        if (height > reqHeight || width > reqWidth) {
+        if ((height > reqHeight) || (width > reqWidth)) {
 
             // Calculate ratios of height and width to requested height and
             // width
-            final int heightRatio = Math.round((float) height / (float) reqHeight);
-            final int widthRatio = Math.round((float) width / (float) reqWidth);
+            final int heightRatio = Math.round((float)height / (float)reqHeight);
+            final int widthRatio = Math.round((float)width / (float)reqWidth);
 
             // Choose the smallest ratio as inSampleSize value, this will
             // guarantee
@@ -74,42 +71,48 @@ public class BitmapProcessor {
         return inSampleSize;
     }
 
+    public static Bitmap decodeStream(final InputStream stream) {
+        try {
+            return BitmapFactory.decodeStream(stream);
+        } catch (final OutOfMemoryError e) {
+            Log.e("BitmapProcessor", "Out of memory in decodeStream()");
+            return null;
+        }
+    }
+
+    public static Bitmap decodeStream(final InputStream stream, final BitmapFactory.Options options) {
+        try {
+            return BitmapFactory.decodeStream(stream, null, options);
+        } catch (final OutOfMemoryError e) {
+            Log.e("BitmapProcessor", "Out of memory in decodeStream()");
+            return null;
+        }
+    }
+
     /**
-     * Decodes a sampled Bitmap from the provided url in the requested width and
-     * height
+     * Decodes a sampled Bitmap from the provided url in the requested width and height
      * 
-     * @param urlString
-     *            URL to download the bitmap from
-     * @param reqWidth
-     *            Requested width
-     * @param reqHeight
-     *            Requested height
+     * @param urlString URL to download the bitmap from
+     * @param reqWidth Requested width
+     * @param reqHeight Requested height
      * @return Decoded bitmap
      */
-    public static Bitmap decodeSampledBitmapFromUrl(String urlString, int reqWidth, int reqHeight) {
-        InputStream inputStream = null;
-        URL url = null;
-
-        try {
-            url = new URL(urlString);
-        } catch (MalformedURLException e) {
-            Log.e(LOG_TAG, "Failed to download bitmap", e);
-            return null;
-        }
-
-        try {
-            inputStream = (InputStream) url.getContent();
-        } catch (IOException e) {
-            Log.e(LOG_TAG, "Failed to download bitmap", e);
-            return null;
-        }
-
+    public Bitmap decodeSampledBitmapFromUrl(final String urlString, int reqWidth, int reqHeight) {
         // First decode with inJustDecodeBounds=true to check dimensions
         final BitmapFactory.Options options = new BitmapFactory.Options();
         options.inJustDecodeBounds = true;
         options.inPurgeable = true;
+        options.inDither = false;
         options.inInputShareable = true;
-        BitmapFactory.decodeStream(inputStream, null, options);
+
+        final BitmapConnection bitmapConnection = new BitmapConnection();
+        bitmapConnection.readStream(urlString, new BitmapConnection.Runnable<Void>() {
+            @Override
+            public Void run(final InputStream stream) {
+                decodeStream(stream, options);
+                return null;
+            }
+        });
 
         if (reqWidth == 0) {
             reqWidth = options.outWidth;
@@ -124,13 +127,11 @@ public class BitmapProcessor {
         // Decode bitmap with inSampleSize set
         options.inJustDecodeBounds = false;
 
-        try {
-            inputStream = (InputStream) url.getContent();
-        } catch (IOException e) {
-            Log.e(LOG_TAG, "Failed to download bitmap", e);
-            return null;
-        }
-
-        return BitmapFactory.decodeStream(inputStream, null, options);
+        return bitmapConnection.readStream(urlString, new BitmapConnection.Runnable<Bitmap>() {
+            @Override
+            public Bitmap run(final InputStream stream) {
+                return decodeStream(stream, options);
+            }
+        });
     }
 }

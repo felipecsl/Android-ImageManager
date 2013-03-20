@@ -14,6 +14,8 @@ import android.view.animation.AnimationSet;
 import android.view.animation.DecelerateInterpolator;
 
 public class Utils {
+    public static final int IO_BUFFER_SIZE = 8 * 1024;
+    
     @SuppressLint("NewApi")
     private static class HoneycombOrHigherUtils {
         public static int getSizeInBytes(Bitmap bitmap) {
@@ -34,6 +36,17 @@ public class Utils {
         }
 
         return bitmap.getRowBytes() * bitmap.getHeight();
+    }
+    
+    public static File getDiskCacheDir(final Context context, final String uniqueName) {
+        // Check if media is mounted or storage is built-in, if so, try and use
+        // external cache dir
+        // otherwise use internal cache dir
+        final String cachePath = (Environment.getExternalStorageState() == Environment.MEDIA_MOUNTED) || !Utils.isExternalStorageRemovable() 
+                ? Utils.getExternalCacheDir(context).getPath() 
+                : context.getCacheDir().getPath();
+
+        return new File(cachePath + File.separator + uniqueName);
     }
 
     public static void fadeIn(View view) {
