@@ -46,6 +46,12 @@ Check the [sample](https://github.com/felipecsl/Android-ImageManager/tree/master
 
 This library was tested with Android API Level 8 and newer.
 
+## Applications using Android-ImageManager
+
+ * [We Heart It](https://play.google.com/store/apps/details?id=com.weheartit)
+ 
+If your app uses this library, send a pull request with the update to this Readme file adding your app to the list!
+
 ## Contributing to Android-ImageManager
 
  * Check out the latest master to make sure the feature hasn't been implemented or the bug hasn't been fixed yet
