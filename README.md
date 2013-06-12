@@ -58,6 +58,7 @@ This library was tested with Android API Level 8 and newer.
 ## Contributors
 
  * Felipe Lima ([@felipecsl](https://github.com/felipecsl))
+ * Matias Pequeno ([@matias-pequeno](https://github.com/matias-pequeno))
 
 ## Copyright
 
