@@ -4,7 +4,6 @@ import java.util.List;
 
 import android.content.Context;
 import android.util.DisplayMetrics;
-import android.util.Log;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.WindowManager;
@@ -23,6 +22,7 @@ public class ListAdapter extends BaseAdapter {
     private final Context context;
     private static int imgWidth;
     private static int imgHeight;
+    private final JobOptions options;
 
     public ListAdapter(Context context, List<String> urls) {
         this.context = context;
@@ -30,6 +30,10 @@ public class ListAdapter extends BaseAdapter {
         this.urls = urls;
         imgHeight = Utils.dpToPx(context, 200);
         imgWidth = getScreenWidth(context);
+        options = new JobOptions();
+        options.centerCrop = true;
+        options.requestedHeight = imgHeight;
+        options.requestedWidth = imgWidth;
     }
 
     @Override
@@ -57,23 +61,18 @@ public class ListAdapter extends BaseAdapter {
         } else {
             imageView = (ImageView)convertView;
         }
-        
-        Log.d("ListAdapter", "url path " + urls.get(position));
-        JobOptions options = new JobOptions();
-        options.centerCrop = true;
-        options.requestedHeight = imgHeight;
-        options.requestedWidth = imgWidth;
+
         imageManager.loadImage(urls.get(position), imageView, options);
-        
+
         return imageView;
     }
-    
+
     private static int getScreenWidth(final Context context) {
         if (context == null)
             return 0;
         return getDisplayMetrics(context).widthPixels;
     }
-    
+
     private static DisplayMetrics getDisplayMetrics(final Context context) {
         final WindowManager windowManager = (WindowManager)context.getSystemService(Context.WINDOW_SERVICE);
         final DisplayMetrics metrics = new DisplayMetrics();

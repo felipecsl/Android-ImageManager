@@ -34,14 +34,13 @@ public class MainActivity extends ListActivity {
     public MainActivity() {
         httpClient = new AsyncHttpClient();
         httpClient.getHttpClient().getParams().setParameter("http.protocol.single-cookie-header", true);
-        httpClient.getHttpClient().getParams().setParameter(ClientPNames.COOKIE_POLICY,
-            CookiePolicy.BROWSER_COMPATIBILITY);
+        httpClient.getHttpClient().getParams().setParameter(ClientPNames.COOKIE_POLICY, CookiePolicy.BROWSER_COMPATIBILITY);
     }
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        
+
         PersistentCookieStore myCookieStore = new PersistentCookieStore(this);
         httpClient.setCookieStore(myCookieStore);
 
@@ -74,14 +73,13 @@ public class MainActivity extends ListActivity {
         final JsonHttpResponseHandler responseHandler = new JsonHttpResponseHandler() {
             @Override
             public void onSuccess(JSONObject json) {
-                Log.d("MainActivity", "onsuccess");
                 try {
                     final JSONArray photos = json.getJSONObject("photos").getJSONArray("photo");
                     int length = photos.length();
-                    
+
                     for (int i = 0; i < length; i++) {
                         final JSONObject photoObj = photos.getJSONObject(i);
-                        
+
                         imageUrls.add(String.format(
                             urlTemplate,
                             String.valueOf(photoObj.getInt("farm")),
@@ -89,16 +87,16 @@ public class MainActivity extends ListActivity {
                             photoObj.getString("id"),
                             photoObj.getString("secret")));
                     }
-                    
+
                     adapter = new ListAdapter(MainActivity.this, imageUrls);
-                    
+
                     setListAdapter(adapter);
                 } catch (JSONException e) {
                     Log.e("MainActivity", "JSON Exception parsing Flickr API", e);
                     Toast.makeText(MainActivity.this, "Sorry there was an exception parsing Flickr API", Toast.LENGTH_LONG).show();
                 }
             }
-            
+
             @Override
             public void onFailure(Throwable arg0, String arg1) {
                 Log.e("MainActivity", "onFailure " + arg1);
