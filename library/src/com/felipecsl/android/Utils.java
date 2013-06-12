@@ -7,14 +7,13 @@ import android.content.Context;
 import android.graphics.Bitmap;
 import android.os.Build;
 import android.os.Environment;
-import android.view.View;
-import android.view.animation.AlphaAnimation;
-import android.view.animation.Animation;
-import android.view.animation.AnimationSet;
-import android.view.animation.DecelerateInterpolator;
+import android.util.Log;
+
+import com.felipecsl.android.imaging.MemoryLruImageCache;
 
 public class Utils {
     public static final int IO_BUFFER_SIZE = 8 * 1024;
+    private static final String TAG = "Utils";
     
     @SuppressLint("NewApi")
     private static class HoneycombOrHigherUtils {
@@ -48,19 +47,32 @@ public class Utils {
 
         return new File(cachePath + File.separator + uniqueName);
     }
+    
+    /**
+     * Creates a LruCache<String, Bitmap> with a capacity of 1/8th of the total available device memory.
+     * 
+     * @return LruCache<String, Bitmap>
+     */
+    public static MemoryLruImageCache createDefaultBitmapLruCache() {
+        // Get max available VM memory, exceeding this amount will throw an
+        // OutOfMemory exception. Stored in kilobytes as LruCache takes an
+        // int in its constructor.
+        final int maxMemory = (int)(Runtime.getRuntime().maxMemory() / 1024); // TODO: We should use ActivityManager.MemoryInfo's availMem
+        Log.d(TAG, "Runtime.getRuntime().maxMemory(): " + maxMemory + "kb");
+        
+        // Use 1/8th of the available memory for this memory cache.
+        final int cacheSize = maxMemory / 8;
+        
+        Log.d(TAG, "Initializing LruCache with size " + cacheSize + "kb");
 
-    public static void fadeIn(View view) {
-        view.clearAnimation();
-        final int fadeInDuration = 200; // 0.2s
+        return new MemoryLruImageCache(cacheSize);
+    }
 
-        Animation fadeIn = new AlphaAnimation(0, 1);
-        fadeIn.setInterpolator(new DecelerateInterpolator()); // add this
-        fadeIn.setDuration(fadeInDuration);
-
-        AnimationSet animation = new AnimationSet(false);
-        animation.addAnimation(fadeIn);
-        animation.setRepeatCount(1);
-        view.setAnimation(animation);
+    public static int dpToPx(final Context context, final int dp) {
+        // Get the screen's density scale
+        final float scale = context.getResources().getDisplayMetrics().density;
+        // Convert the dps to pixels, based on density scale
+        return (int)((dp * scale) + 0.5f);
     }
     
     public static boolean isExternalStorageRemovable() {

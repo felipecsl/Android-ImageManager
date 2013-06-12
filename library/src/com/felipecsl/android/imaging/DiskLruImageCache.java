@@ -22,26 +22,38 @@ import com.jakewharton.DiskLruCache;
 public class DiskLruImageCache {
 
     private static final String LOG_TAG = "DiskLruImageCache";
-    private DiskLruCache mDiskCache;
-    private static CompressFormat mCompressFormat = CompressFormat.JPEG;
-    private static int mCompressQuality = 70;
+    private DiskLruCache diskCache;
+    private static DiskLruImageCache instance;
+    private static CompressFormat compressFormat = CompressFormat.JPEG;
+    private static int compressQuality = 70;
     private static final int APP_VERSION = 1;
     private static final int VALUE_COUNT = 1;
     private static final String TAG = "WHIDiskLruImageCache";
     private static final int DISK_CACHE_SIZE = 1024 * 1024 * 10; // 10MB
 
-    public DiskLruImageCache(final Context context) {
-        this(context, mCompressFormat, mCompressQuality);
+    public static DiskLruImageCache getInstance(final Context context) {
+        if (instance == null) {
+            instance = new DiskLruImageCache(context);
+        }
+        return instance;
     }
 
-    public DiskLruImageCache(final Context context, final CompressFormat compressFormat, final int quality) {
+    public static boolean isInitialized() {
+        return instance != null;
+    }
+
+    private DiskLruImageCache(final Context context) {
+        this(context, compressFormat, compressQuality);
+    }
+
+    private DiskLruImageCache(final Context context, final CompressFormat format, final int quality) {
         try {
             final File diskCacheDir = Utils.getDiskCacheDir(context, DiskLruImageCache.TAG);
-            mDiskCache = DiskLruCache.open(diskCacheDir, APP_VERSION, VALUE_COUNT, DiskLruImageCache.DISK_CACHE_SIZE);
-            mCompressFormat = compressFormat;
-            mCompressQuality = quality;
+            diskCache = DiskLruCache.open(diskCacheDir, APP_VERSION, VALUE_COUNT, DiskLruImageCache.DISK_CACHE_SIZE);
+            compressFormat = format;
+            compressQuality = quality;
         } catch (final IOException e) {
-            e.printStackTrace();
+            Log.e(TAG, "Failed to initialize DiskLruImageCache", e);
         }
     }
 
@@ -49,7 +61,7 @@ public class DiskLruImageCache {
         OutputStream out = null;
         try {
             out = new BufferedOutputStream(editor.newOutputStream(0), Utils.IO_BUFFER_SIZE);
-            return bitmap.compress(mCompressFormat, mCompressQuality, out);
+            return bitmap.compress(compressFormat, compressQuality, out);
         } finally {
             if (out != null) {
                 out.close();
@@ -57,14 +69,15 @@ public class DiskLruImageCache {
         }
     }
 
-
-
     @SuppressWarnings("unused")
     public void put(final String key, final Bitmap data) {
+        if (diskCache == null) {
+            return;
+        }
 
         DiskLruCache.Editor editor = null;
         try {
-            editor = mDiskCache.edit(key);
+            editor = diskCache.edit(key);
             if (editor == null)
                 return;
 
@@ -83,17 +96,21 @@ public class DiskLruImageCache {
                 if (editor != null) {
                     editor.abort();
                 }
-            } catch (final IOException ignored) {}
+            } catch (final IOException ignored) {} catch (final IllegalStateException ignored) {}
         }
 
     }
 
     public Bitmap getBitmap(final String key) {
+        if (diskCache == null) {
+            return null;
+        }
+
         Bitmap bitmap = null;
         DiskLruCache.Snapshot snapshot = null;
         try {
 
-            snapshot = mDiskCache.get(key);
+            snapshot = diskCache.get(key);
             if (snapshot == null)
                 return null;
             final InputStream in = snapshot.getInputStream(0);
@@ -102,7 +119,7 @@ public class DiskLruImageCache {
                 bitmap = BitmapProcessor.decodeStream(buffIn);
             }
         } catch (final IOException e) {
-            e.printStackTrace();
+            Log.e(TAG, "ERROR getBitmap", e);
         } finally {
             if (snapshot != null) {
                 snapshot.close();
@@ -112,15 +129,18 @@ public class DiskLruImageCache {
         return bitmap;
     }
 
-
     public boolean containsKey(final String key) {
+        if (diskCache == null) {
+            return false;
+        }
+
         boolean contained = false;
         DiskLruCache.Snapshot snapshot = null;
         try {
-            snapshot = mDiskCache.get(key);
+            snapshot = diskCache.get(key);
             contained = (snapshot != null);
         } catch (final IOException e) {
-            e.printStackTrace();
+            Log.e(TAG, "", e);
         } finally {
             if (snapshot != null) {
                 snapshot.close();
@@ -130,14 +150,19 @@ public class DiskLruImageCache {
         return contained;
     }
 
+    @SuppressWarnings("unused")
     public void clearCache() {
-        if (ImageManager.LOG_CACHE_OPERATIONS) {
+        if (diskCache == null) {
+            return;
+        }
+
+        if (BuildConfig.DEBUG && ImageManager.LOG_CACHE_OPERATIONS) {
             Log.v(LOG_TAG, "disk cache CLEARED");
         }
         try {
-            mDiskCache.delete();
+            diskCache.delete();
         } catch (final IOException e) {
-            e.printStackTrace();
+            Log.e(TAG, "", e);
         }
     }
 
