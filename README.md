@@ -1,8 +1,8 @@
 Android-ImageManager
 ====================
 
-Android-ImageManager handles all the boilerplate code for simple downloading caching and using images with Android.
-It downloads the images and caches them using an LRU and disk cache.
+Android-ImageManager handles all the boilerplate code for simple downloading, caching and using images with Android.
+It downloads the images and caches them using an in-memory LRU and a second level Disk cache.
 
 Usage:
 
@@ -19,13 +19,20 @@ public class MainActivity extends Activity {
         super.onCreate(savedInstanceState);
         final MainActivity self = this;
 
-        new InitDiskCacheTask() {
-			@Override
-			protected void onPostExecute(DiskLruImageCache diskCache) {
-				imageManager = new ImageManager(diskCache, self);
-			}
-		}.execute(this);
-	}
+        if (!DiskLruImageCache.isInitialized()) {
+            new AsyncTask<Void, Void, Void>() {
+                @Override
+                protected Void doInBackground(Void... params) {
+                    DiskLruImageCache.getInstance(self);
+                    return null;
+                }
+
+                @Override
+                protected void onPostExecute(Void result) {
+                    imageManager = new ImageManager(self);
+                }
+            }.execute();
+        }
 }
 ```
 
@@ -34,6 +41,8 @@ public class MainActivity extends Activity {
 ```java
 imageManager.loadImage("http://www.roflcat.com/images/cats/bike.jpg", imageView, new ImageManager.JobOptions());
 ```
+
+Check the [sample](https://github.com/felipecsl/Android-ImageManager/tree/master/samples) application for an example of usage
 
 This library was tested with Android API Level 8 and newer.
 
