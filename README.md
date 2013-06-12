@@ -42,7 +42,11 @@ public class MainActivity extends Activity {
 imageManager.loadImage("http://www.roflcat.com/images/cats/bike.jpg", imageView, new ImageManager.JobOptions());
 ```
 
+## Sample application
+
 Check the [sample](https://github.com/felipecsl/Android-ImageManager/tree/master/samples) application for an example of usage
+
+Soon on Google Play store!
 
 This library was tested with Android API Level 8 and newer.
 
