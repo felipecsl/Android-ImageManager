@@ -13,7 +13,7 @@ import com.loopj.android.http.AsyncHttpClient;
 import com.loopj.android.http.BinaryHttpResponseHandler;
 import com.loopj.android.http.RequestParams;
 
-class BitmapHttpClient {
+public class BitmapHttpClient {
     private static final String TAG = "BitmapHttpClient";
     private static AsyncHttpClient client = new AsyncHttpClient();
 
@@ -27,9 +27,9 @@ class BitmapHttpClient {
             Log.e(TAG, "", e);
         } catch (final URISyntaxException e) {
             Log.e(TAG, "", e);
-        } catch (UnsupportedEncodingException e) {
+        } catch (final UnsupportedEncodingException e) {
             Log.e(TAG, "", e);
-        } catch(IllegalArgumentException e) {
+        } catch (final IllegalArgumentException e) {
             Log.e(TAG, "", e);
         }
     }

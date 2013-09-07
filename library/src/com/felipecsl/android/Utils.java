@@ -4,9 +4,13 @@ import java.io.File;
 
 import android.annotation.SuppressLint;
 import android.content.Context;
+import android.database.Cursor;
 import android.graphics.Bitmap;
+import android.net.Uri;
 import android.os.Build;
 import android.os.Environment;
+import android.provider.MediaStore;
+import android.support.v4.content.CursorLoader;
 import android.util.Log;
 
 import com.felipecsl.android.imaging.MemoryLruImageCache;
@@ -17,7 +21,7 @@ public class Utils {
 
     @SuppressLint("NewApi")
     private static class HoneycombOrHigherUtils {
-        public static int getSizeInBytes(Bitmap bitmap) {
+        public static int getSizeInBytes(final Bitmap bitmap) {
             return bitmap.getByteCount();
         }
     }
@@ -29,12 +33,42 @@ public class Utils {
         }
     }
 
-    public static int getSizeInBytes(Bitmap bitmap) {
+    public static int getSizeInBytes(final Bitmap bitmap) {
         if (Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.HONEYCOMB_MR2) {
             return HoneycombOrHigherUtils.getSizeInBytes(bitmap);
         }
 
         return bitmap.getRowBytes() * bitmap.getHeight();
+    }
+
+    /**
+     * Gets the corresponding path to a file from the given content:// URI
+     * <p>
+     * This must run on the main thread
+     * 
+     * @param context
+     * @param uri
+     * @return the file path as a string
+     */
+    public static String getContentPathFromUri(final Context context, final Uri uri) {
+        Cursor cursor = null;
+        String contentPath = null;
+        try {
+            final String[] proj = { MediaStore.Images.Media.DATA };
+            final CursorLoader loader = new CursorLoader(context, uri, proj, null, null, null);
+            cursor = loader.loadInBackground();
+            final int columnIndex = cursor.getColumnIndexOrThrow(MediaStore.Images.Media.DATA);
+            cursor.moveToFirst();
+            contentPath = cursor.getString(columnIndex);
+        } catch (final Exception e) {
+            Log.w(TAG, "getContentPathFromURI(" + uri.toString() + "): " + e.getMessage());
+        } finally {
+            if (cursor != null)
+                cursor.close();
+        }
+
+        return contentPath != null ? contentPath : "";
+
     }
 
     public static File getDiskCacheDir(final Context context, final String uniqueName) {
@@ -91,7 +125,7 @@ public class Utils {
         return true;
     }
 
-    public static File getExternalCacheDir(Context context) {
+    public static File getExternalCacheDir(final Context context) {
         if (hasExternalCacheDir()) {
             return context.getExternalCacheDir();
         }

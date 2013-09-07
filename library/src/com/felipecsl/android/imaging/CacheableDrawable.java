@@ -5,265 +5,158 @@ import android.content.Context;
 import android.content.res.Resources;
 import android.graphics.Bitmap;
 import android.graphics.Canvas;
-import android.graphics.Color;
 import android.graphics.ColorFilter;
 import android.graphics.Paint;
-import android.graphics.PixelFormat;
 import android.graphics.Rect;
 import android.graphics.drawable.BitmapDrawable;
 import android.graphics.drawable.Drawable;
 import android.os.SystemClock;
 import android.widget.ImageView;
 
-enum LoadedFrom {
-    MEMORY(Color.GREEN), DISK(Color.YELLOW), NETWORK(Color.RED);
-
-    final int debugColor;
-
-    private LoadedFrom(int debugColor) {
-        this.debugColor = debugColor;
-    }
-}
+import com.felipecsl.android.BuildConfig;
 
 // Took from
 // https://github.com/square/picasso/blob/master/picasso/src/main/java/com/squareup/picasso/PicassoDrawable.java
-final class CacheableDrawable extends Drawable {
+public final class CacheableDrawable extends Drawable {
     // Only accessed from main thread.
     private static final Paint DEBUG_PAINT = new Paint();
-
     private static final float FADE_DURATION = 200f; // ms
+
+    private static boolean DEBUG = BuildConfig.DEBUG;
 
     /**
      * Create or update the drawable on the target {@link ImageView} to display the supplied bitmap
      * image.
      */
-    static void setBitmap(ImageView target, Context context, Bitmap bitmap, LoadedFrom loadedFrom, boolean noFade, boolean debugging) {
-        CacheableDrawable cacheableDrawable = extractCacheableDrawable(target);
-        if (cacheableDrawable != null) {
-            cacheableDrawable.setBitmap(bitmap, loadedFrom, noFade);
-        } else {
-            target.setImageDrawable(new CacheableDrawable(context, bitmap, loadedFrom, noFade, debugging));
-        }
+    static void setBitmap(final ImageView target, final Context context, final Bitmap bitmap, final LoadedFrom loadedFrom, final boolean noFade) {
+        final CacheableDrawable drawable = new CacheableDrawable(context, target.getDrawable(), bitmap, loadedFrom, noFade);
+        target.setImageDrawable(drawable);
     }
 
     /**
      * Create or update the drawable on the target {@link ImageView} to display the supplied
      * placeholder image.
      */
-    static void setPlaceholder(ImageView target, Context context, int placeholderResId, Drawable placeholderDrawable, boolean debugging) {
-        CacheableDrawable cacheableDrawable = extractCacheableDrawable(target);
-        if (cacheableDrawable != null) {
-            cacheableDrawable.setPlaceholder(placeholderResId, placeholderDrawable);
+    static void setPlaceholder(final ImageView target, final int placeholderResId, final Drawable placeholderDrawable) {
+        if (placeholderResId != 0) {
+            target.setImageResource(placeholderResId);
         } else {
-            target.setImageDrawable(new CacheableDrawable(context, placeholderResId, placeholderDrawable, debugging));
+            target.setImageDrawable(placeholderDrawable);
         }
     }
 
     /**
-     * Check for an existing instance of picasso drawable to save allocations if we need to set a
-     * placeholder or were able to find the bitmap in the memory cache.
+     * Enable or disable debugging indicators
+     * 
+     * @param debug
      */
-    private static CacheableDrawable extractCacheableDrawable(ImageView target) {
-        Drawable targetDrawable = target.getDrawable();
-        if (targetDrawable instanceof CacheableDrawable) {
-            return (CacheableDrawable)targetDrawable;
-        }
-        return null;
+    public static void setShowDebugIndicator(final boolean debug) {
+        DEBUG = debug;
     }
 
-    private final Context context;
-    private final boolean debugging;
+    public static boolean getShowDebugIndicator() {
+        return DEBUG;
+    }
+
     private final float density;
+    private final LoadedFrom loadedFrom;
+    final BitmapDrawable image;
 
-    int placeholderResId;
-    Drawable placeHolderDrawable;
+    Drawable placeholder;
 
-    BitmapDrawable bitmapDrawable;
-    private LoadedFrom loadedFrom;
-
-    private int alpha;
-    private long startTimeMillis;
+    long startTimeMillis;
     boolean animating;
 
-    /**
-     * Construct a drawable with the given placeholder (drawable or resource id). The actual bitmap
-     * will be set later via
-     * {@link #setBitmap(android.graphics.Bitmap, com.squareup.picasso.Request.LoadedFrom, boolean)}
-     * ).
-     * <p/>
-     * This drawable may be re-used with view recycling by a call to
-     * {@link #setBitmap(android.graphics.Bitmap, com.squareup.picasso.Request.LoadedFrom, boolean)}
-     * or {@link #setPlaceholder(int, android.graphics.drawable.Drawable)}.
-     */
-    CacheableDrawable(Context context, int placeholderResId, Drawable placeholderDrawable, boolean debugging) {
-        Resources resources = context.getResources();
+    public CacheableDrawable(final Context context, final Drawable placeholder, final Bitmap bitmap, final LoadedFrom loadedFrom, final boolean noFade) {
+        final Resources res = context.getResources();
 
-        this.context = context.getApplicationContext();
-        this.density = resources.getDisplayMetrics().density;
+        density = res.getDisplayMetrics().density;
 
-        this.placeholderResId = placeholderResId;
-        if (placeholderResId != 0) {
-            placeholderDrawable = resources.getDrawable(placeholderResId);
-        }
-        this.placeHolderDrawable = placeholderDrawable;
-
-        this.debugging = debugging;
-    }
-
-    /**
-     * Construct a drawable with the actual bitmap for immediate display.
-     * <p/>
-     * This drawable may be re-used with view recycling by a call to
-     * {@link #setBitmap(android.graphics.Bitmap, com.squareup.picasso.Request.LoadedFrom, boolean)}
-     * or {@link #setPlaceholder(int, android.graphics.drawable.Drawable)}.
-     */
-    CacheableDrawable(Context context, Bitmap bitmap, LoadedFrom loadedFrom, boolean noFade, boolean debugging) {
-        Resources resources = context.getResources();
-
-        this.context = context.getApplicationContext();
         this.loadedFrom = loadedFrom;
-        this.density = resources.getDisplayMetrics().density;
 
-        // TODO remove. draw ourselves.
-        this.bitmapDrawable = new BitmapDrawable(resources, bitmap);
+        image = new BitmapDrawable(res, bitmap);
 
-        this.debugging = debugging;
-
-        if (loadedFrom != LoadedFrom.MEMORY && !noFade) {
-            startTimeMillis = 0;
+        final boolean fade = loadedFrom != LoadedFrom.MEMORY && !noFade;
+        if (fade) {
+            this.placeholder = placeholder;
             animating = true;
+            startTimeMillis = SystemClock.uptimeMillis();
         }
     }
 
     @Override
-    public void draw(Canvas canvas) {
-        // If no bitmap has been set, quickly draw the placeholder which must be present and return.
-        if (bitmapDrawable == null) {
-            placeHolderDrawable.draw(canvas);
-            return;
-        }
-
-        boolean done = true;
-
-        if (animating) {
-            if (startTimeMillis == 0) {
-                startTimeMillis = SystemClock.uptimeMillis();
-                done = false;
-                alpha = 0;
-            } else {
-                float normalized = (SystemClock.uptimeMillis() - startTimeMillis) / FADE_DURATION;
-                done = normalized >= 1.0f;
-                normalized = Math.min(normalized, 1.0f);
-                alpha = (int)(0xFF * normalized);
-            }
-        }
-
-        if (done) {
-            bitmapDrawable.draw(canvas);
+    public void draw(final Canvas canvas) {
+        if (!animating) {
+            image.draw(canvas);
         } else {
-            if (placeHolderDrawable != null) {
-                placeHolderDrawable.draw(canvas);
+            if (placeholder != null) {
+                placeholder.draw(canvas);
             }
-            if (alpha > 0) {
-                bitmapDrawable.setAlpha(alpha);
-                bitmapDrawable.draw(canvas);
-                bitmapDrawable.setAlpha(0xFF);
+
+            final float normalized = (SystemClock.uptimeMillis() - startTimeMillis) / FADE_DURATION;
+            final int alpha = (int)(0xFF * normalized);
+
+            if (normalized >= 1f) {
+                animating = false;
+                placeholder = null;
+                image.draw(canvas);
+            } else {
+                image.setAlpha(alpha);
+                image.draw(canvas);
+                image.setAlpha(0xFF);
+                invalidateSelf();
             }
-            invalidateSelf();
         }
 
-        if (debugging) {
+        if (DEBUG) {
             drawDebugIndicator(canvas);
         }
     }
 
     @Override
     public int getIntrinsicWidth() {
-        if (bitmapDrawable != null) {
-            return bitmapDrawable.getIntrinsicWidth();
-        }
-        return -1;
+        return image.getIntrinsicWidth();
     }
 
     @Override
     public int getIntrinsicHeight() {
-        if (bitmapDrawable != null) {
-            return bitmapDrawable.getIntrinsicHeight();
+        return image.getIntrinsicHeight();
+    }
+
+    @Override
+    public void setAlpha(final int alpha) {
+        if (placeholder != null) {
+            placeholder.setAlpha(alpha);
         }
-        return -1;
+        image.setAlpha(alpha);
     }
 
     @Override
-    public void setAlpha(int alpha) {
-        // No-op
-    }
-
-    @Override
-    public void setColorFilter(ColorFilter cf) {
-        // No-op
+    public void setColorFilter(final ColorFilter cf) {
+        if (placeholder != null) {
+            placeholder.setColorFilter(cf);
+        }
+        image.setColorFilter(cf);
     }
 
     @Override
     public int getOpacity() {
-        return PixelFormat.OPAQUE;
+        return image.getOpacity();
     }
 
     @Override
-    protected void onBoundsChange(Rect bounds) {
+    protected void onBoundsChange(final Rect bounds) {
         super.onBoundsChange(bounds);
-        if (bitmapDrawable != null) {
-            setBounds(this.bitmapDrawable);
-        }
-        if (placeHolderDrawable != null) {
-            this.placeHolderDrawable.setBounds(getBounds());
+
+        image.setBounds(bounds);
+        if (placeholder != null) {
+            // Center placeholder inside the image bounds
+            setBounds(placeholder);
         }
     }
 
-    /**
-     * Reset to displaying the specified placeholder (drawable or resource id). This will be called
-     * when a view is recycled to avoid creating a new drawable.
-     */
-    void setPlaceholder(int placeholderResId, Drawable placeHolderDrawable) {
-        bitmapDrawable = null;
-        loadedFrom = null;
-
-        if (placeholderResId != 0) {
-            if (this.placeholderResId != placeholderResId) {
-                this.placeHolderDrawable = context.getResources().getDrawable(placeholderResId);
-                this.placeHolderDrawable.setBounds(getBounds());
-            }
-        } else if (this.placeHolderDrawable != placeHolderDrawable) {
-            this.placeHolderDrawable = placeHolderDrawable;
-            this.placeHolderDrawable.setBounds(getBounds());
-        }
-
-        invalidateSelf();
-    }
-
-    /**
-     * Set the actual bitmap that we should be displaying. If we already have an image and the
-     * source
-     * of the new image was not the memory cache then perform a cross-fade.
-     */
-    void setBitmap(Bitmap bitmap, LoadedFrom loadedFrom, boolean noFade) {
-        boolean fade = loadedFrom != LoadedFrom.MEMORY && !noFade;
-        if (bitmapDrawable != null && fade) {
-            placeHolderDrawable = bitmapDrawable;
-        }
-
-        bitmapDrawable = new BitmapDrawable(context.getResources(), bitmap);
-        setBounds(bitmapDrawable);
-
-        this.loadedFrom = loadedFrom;
-
-        startTimeMillis = 0;
-        animating = fade;
-
-        invalidateSelf();
-    }
-
-    private void setBounds(Drawable drawable) {
-        Rect bounds = getBounds();
+    private void setBounds(final Drawable drawable) {
+        final Rect bounds = getBounds();
 
         final int width = bounds.width();
         final int height = bounds.height();
@@ -288,7 +181,7 @@ final class CacheableDrawable extends Drawable {
         }
     }
 
-    private void drawDebugIndicator(Canvas canvas) {
+    private void drawDebugIndicator(final Canvas canvas) {
         canvas.save();
         canvas.rotate(45);
 
@@ -301,5 +194,10 @@ final class CacheableDrawable extends Drawable {
         canvas.drawRect(0, -9 * density, 6.5f * density, 9 * density, DEBUG_PAINT);
 
         canvas.restore();
+
+        final Paint paint = new Paint();
+        paint.setColor(loadedFrom.debugColor);
+        paint.setStyle(Paint.Style.STROKE);
+        canvas.drawRect(1 * density, 1 * density, canvas.getWidth(), canvas.getHeight(), paint);
     }
 }

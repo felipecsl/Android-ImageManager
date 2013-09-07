@@ -13,11 +13,11 @@ public class MemoryLruImageCache extends LruCache<String, Bitmap> {
         void onEntryRemoved(boolean evicted, String key, Bitmap oldValue, Bitmap newValue);
     }
 
-    public MemoryLruImageCache(int cacheSizeInKb) {
+    public MemoryLruImageCache(final int cacheSizeInKb) {
         super(cacheSizeInKb);
     }
 
-    public void setEntryRemovedCallback(MemoryCacheEntryRemovedCallback onEntryRemovedCallback) {
+    public void setEntryRemovedCallback(final MemoryCacheEntryRemovedCallback onEntryRemovedCallback) {
         this.onEntryRemovedCallback = onEntryRemovedCallback;
     }
 
@@ -28,7 +28,7 @@ public class MemoryLruImageCache extends LruCache<String, Bitmap> {
     }
 
     @Override
-    protected void entryRemoved(boolean evicted, String key, Bitmap oldValue, Bitmap newValue) {
+    protected void entryRemoved(final boolean evicted, final String key, final Bitmap oldValue, final Bitmap newValue) {
         super.entryRemoved(evicted, key, oldValue, newValue);
 
         if (onEntryRemovedCallback != null) {

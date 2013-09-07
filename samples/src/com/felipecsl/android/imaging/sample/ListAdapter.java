@@ -13,25 +13,26 @@ import android.widget.ImageView;
 
 import com.felipecsl.android.Utils;
 import com.felipecsl.android.imaging.ImageManager;
-import com.felipecsl.android.imaging.ImageManager.JobOptions;
+import com.felipecsl.android.imaging.JobOptions;
+import com.felipecsl.android.imaging.ScaleType;
 
 public class ListAdapter extends BaseAdapter {
 
-    private List<String> urls;
+    private final List<String> urls;
     private final ImageManager imageManager;
     private final Context context;
     private static int imgWidth;
     private static int imgHeight;
     private final JobOptions options;
 
-    public ListAdapter(Context context, List<String> urls) {
+    public ListAdapter(final Context context, final List<String> urls) {
         this.context = context;
         imageManager = new ImageManager(context);
         this.urls = urls;
         imgHeight = Utils.dpToPx(context, 200);
         imgWidth = getScreenWidth(context);
         options = new JobOptions();
-        options.centerCrop = true;
+        options.scaleType = ScaleType.CENTER_CROP;
         options.requestedHeight = imgHeight;
         options.requestedWidth = imgWidth;
     }
@@ -42,17 +43,17 @@ public class ListAdapter extends BaseAdapter {
     }
 
     @Override
-    public Object getItem(int i) {
+    public Object getItem(final int i) {
         return urls.get(i);
     }
 
     @Override
-    public long getItemId(int i) {
+    public long getItemId(final int i) {
         return 0;
     }
 
     @Override
-    public View getView(final int position, View convertView, final ViewGroup parent) {
+    public View getView(final int position, final View convertView, final ViewGroup parent) {
         ImageView imageView = null;
 
         if (convertView == null) {

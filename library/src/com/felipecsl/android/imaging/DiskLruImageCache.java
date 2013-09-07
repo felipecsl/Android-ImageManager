@@ -21,14 +21,13 @@ import com.jakewharton.DiskLruCache;
 // With adaptations
 public class DiskLruImageCache {
 
-    private static final String LOG_TAG = "DiskLruImageCache";
+    private static final String TAG = "DiskLruImageCache";
     private DiskLruCache diskCache;
     private static DiskLruImageCache instance;
     private static CompressFormat compressFormat = CompressFormat.JPEG;
     private static int compressQuality = 70;
     private static final int APP_VERSION = 1;
     private static final int VALUE_COUNT = 1;
-    private static final String TAG = "WHIDiskLruImageCache";
     private static final int DISK_CACHE_SIZE = 1024 * 1024 * 10; // 10MB
 
     public static DiskLruImageCache getInstance(final Context context) {
@@ -157,7 +156,7 @@ public class DiskLruImageCache {
         }
 
         if (BuildConfig.DEBUG && ImageManager.LOG_CACHE_OPERATIONS) {
-            Log.v(LOG_TAG, "disk cache CLEARED");
+            Log.v(TAG, "disk cache CLEARED");
         }
         try {
             diskCache.delete();
