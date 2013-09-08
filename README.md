@@ -39,8 +39,15 @@ public class MainActivity extends Activity {
 **Loading images**
 
 ```java
-imageManager.loadImage("http://www.roflcat.com/images/cats/bike.jpg", imageView, new ImageManager.JobOptions());
+imageManager.loadImage("http://www.roflcat.com/images/cats/bike.jpg", imageView, new JobOptions());
 ```
+
+## Features
+
+* Seamless two-level caching (Memory and Disk, using DiskLruCache)
+* Concurrent image downloads via android-async-http library
+* Auto-rotation of JPEG images based on the EXIF information
+* Ability to load local files (eg. from the device Gallery app using Uri)
 
 ## Sample application
 
