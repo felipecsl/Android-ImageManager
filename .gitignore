@@ -19,3 +19,7 @@ local.properties
 .classpath
 .project
 .DS_Store
+
+.idea
+.gradle
+*.iml

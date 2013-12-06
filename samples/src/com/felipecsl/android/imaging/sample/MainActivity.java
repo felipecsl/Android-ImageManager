@@ -74,6 +74,7 @@ public class MainActivity extends Activity {
         queryString.put("text", "cat");
         queryString.put("format", "json");
         queryString.put("nojsoncallback", "1");
+        queryString.put("page", "1");
         final RequestParams requestParams = new RequestParams(queryString);
         final JsonHttpResponseHandler responseHandler = new JsonHttpResponseHandler() {
             @Override
