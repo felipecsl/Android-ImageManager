@@ -48,7 +48,12 @@ public class ProcessorCallback implements ImageManagerCallback {
     @Override
     public void onLoadFailed(final LoadedFrom source, final Exception e) {
         if (imageManager.getPlaceholderResId() != ImageManager.NO_PLACEHOLDER)
-            CacheableDrawable.setPlaceholder(imageView, imageManager.getPlaceholderResId(), null);
+            uiHandler.post(new Runnable() {
+                @Override
+                public void run() {
+                    CacheableDrawable.setPlaceholder(imageView, imageManager.getPlaceholderResId(), null);
+                }
+            });
 
         Log.e(TAG, String.format("failed to load %s: %s from %s", url, e.getMessage(), source.toString()), e);
     }

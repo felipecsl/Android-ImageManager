@@ -13,6 +13,19 @@ repositories {
     mavenCentral()
 }
 
+def isReleaseBuild() {
+    return version.contains("SNAPSHOT") == false
+}
+
+allprojects {
+    version = VERSION_NAME
+    group = GROUP
+
+    repositories {
+        mavenCentral()
+    }
+}
+
 android {
     compileSdkVersion 19
     buildToolsVersion "19.0.0"
@@ -21,16 +34,13 @@ android {
         minSdkVersion 8
         targetSdkVersion 19
     }
-    release {
-        runProguard true
-        proguardFile 'proguard-rules.txt'
-        proguardFile getDefaultProguardFile('proguard-android-optimize.txt')
-    }
 }
 
 dependencies {
-	compile 'com.android.support:appcompat-v7:+'
+    compile 'com.android.support:support-v4:18.0.+'
     compile 'com.squareup.okhttp:okhttp:+'
     compile 'commons-io:commons-io:2.4'
     compile 'com.jakewharton:disklrucache:+'
 }
+
+apply from: 'https://raw.github.com/chrisbanes/gradle-mvn-push/master/gradle-mvn-push.gradle'

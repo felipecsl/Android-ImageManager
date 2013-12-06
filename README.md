@@ -53,7 +53,9 @@ imageManager.loadImage("http://www.roflcat.com/images/cats/bike.jpg", imageView,
 
 Check the [sample](https://github.com/felipecsl/Android-ImageManager/tree/master/samples) application for an example of usage
 
-Soon on Google Play store!
+Try out the sample application on [Google Play](https://play.google.com/store/apps/details?id=com.felipecsl.android.imaging.sample)
+
+[![Gplay](https://developer.android.com/images/brand/en_generic_rgb_wo_60.png)](https://play.google.com/store/apps/details?id=com.felipecsl.android.imaging.sample)
 
 This library was tested with Android API Level 8 and newer.
 
