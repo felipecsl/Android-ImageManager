@@ -25,3 +25,5 @@ local.properties
 *.iml
 
 signing.properties
+
+build/
