@@ -26,16 +26,13 @@ public class ProcessorCallback implements ImageManagerCallback {
     }
 
     @Override
-    public void onBitmapLoaded(Bitmap bitmap, final LoadedFrom source) {
+    public void onBitmapLoaded(final Bitmap bitmap, final LoadedFrom source) {
         if (bitmap == null) {
             Log.e(TAG, "queueJob for urlString null");
             return;
         }
 
-        if (options.storeTransformed)
-            bitmap = ImageUtil.transformBitmap(bitmap, options);
-
-        imageManager.getCacheManager().put(url, bitmap);
+        imageManager.getCacheManager().put(ImageManager.getCacheKeyForJob(url, options), bitmap);
 
         final String cachedUrl = imageManager.getRunningJobs().get(imageView);
 
@@ -47,13 +44,14 @@ public class ProcessorCallback implements ImageManagerCallback {
 
     @Override
     public void onLoadFailed(final LoadedFrom source, final Exception e) {
-        if (imageManager.getPlaceholderResId() != ImageManager.NO_PLACEHOLDER)
+        if (imageManager.getPlaceholderResId() != ImageManager.NO_PLACEHOLDER) {
             uiHandler.post(new Runnable() {
                 @Override
                 public void run() {
                     CacheableDrawable.setPlaceholder(imageView, imageManager.getPlaceholderResId(), null);
                 }
             });
+        }
 
         Log.e(TAG, String.format("failed to load %s: %s from %s", url, e.getMessage(), source.toString()), e);
     }
@@ -66,24 +64,24 @@ public class ProcessorCallback implements ImageManagerCallback {
             options.requestedHeight = targetHeight;
         }
 
-        // If storeTransformed is set, it means the bitmap was already transformed
-        if (!options.storeTransformed)
-            bitmap = ImageUtil.transformBitmap(bitmap, options);
-
         // Process the transformed (smaller) image
-        if (options.roundedCorners) {
-            final BitmapProcessor processor = new BitmapProcessor(imageManager.getContext());
-            final Bitmap roundedBitmap = processor.getRoundedCorners(bitmap, options.cornerRadius);
-            if (roundedBitmap != null)
-                bitmap = roundedBitmap;
-        }
+        final BitmapProcessor processor = new BitmapProcessor(imageManager.getContext());
+        Bitmap processedBitmap = null;
+
+        if (options.roundedCorners)
+            processedBitmap = processor.getRoundedCorners(bitmap, options.radius);
+        else if (options.circle)
+            processedBitmap = processor.getCircle(bitmap);
+
+        if (processedBitmap != null)
+            bitmap = processedBitmap;
 
         final Bitmap finalBitmap = bitmap;
 
         uiHandler.post(new Runnable() {
             @Override
             public void run() {
-                CacheableDrawable.setBitmap(imageView, imageManager.getContext(), finalBitmap, loadedFrom, !options.fadeIn);
+                CacheableDrawable.setBitmap(imageView, imageManager.getContext(), finalBitmap, loadedFrom, !options.fadeIn, true);
 
                 final ImageViewCallback imageViewCallback = imageManager.getImageViewCallback();
 

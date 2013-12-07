@@ -35,7 +35,7 @@ android {
 }
 
 dependencies {
+    compile project(":library")
     compile 'com.android.support:support-v4:18.0.+'
-    compile 'com.felipecsl.android:library:1.0.0-SNAPSHOT'
     compile 'com.loopj.android:android-async-http:1.4.3'
 }

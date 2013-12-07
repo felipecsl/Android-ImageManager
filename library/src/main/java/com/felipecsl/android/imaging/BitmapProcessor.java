@@ -140,6 +140,30 @@ public class BitmapProcessor {
         return inSampleSize;
     }
 
+    public Bitmap getCircle(final Bitmap bitmap) {
+        Bitmap output = null;
+        try {
+            output = Bitmap.createBitmap(bitmap.getWidth(), bitmap.getHeight(), Bitmap.Config.ARGB_4444);
+        } catch (final OutOfMemoryError e) {
+            Log.e(TAG, "Out of memory in getCircle()");
+            return null;
+        }
+        final Canvas canvas = new Canvas(output);
+
+        final int color = 0xff424242;
+        final Paint paint = new Paint();
+        final Rect rect = new Rect(0, 0, bitmap.getWidth(), bitmap.getHeight());
+
+        paint.setAntiAlias(true);
+        canvas.drawARGB(0, 0, 0, 0);
+        paint.setColor(color);
+        canvas.drawCircle(bitmap.getWidth() / 2, bitmap.getHeight() / 2, bitmap.getWidth() / 2, paint);
+        paint.setXfermode(new PorterDuffXfermode(PorterDuff.Mode.SRC_IN));
+        canvas.drawBitmap(bitmap, rect, rect, paint);
+
+        return output;
+    }
+
     /**
      * Calculate max sampleSize logarithmically to obtain a ^2 sample
      * <p>
@@ -465,14 +489,11 @@ public class BitmapProcessor {
                     Log.d(TAG, "compression attempt at " + fCeil + "x" + fCeil);
 
                     // Downscale bitmap
-                    Bitmap transformedBitmap = ImageUtil.transformBitmap(bitmap, new JobOptions() {
-                        @Override
-                        protected void onPreExecute() {
-                            requestedWidth = fCeil;
-                            requestedHeight = fCeil;
-                            scaleType = ScaleType.FIT_CENTER;
-                        }
-                    });
+                    JobOptions options = new JobOptions();
+                    options.requestedWidth = fCeil;
+                    options.requestedHeight = fCeil;
+                    options.scaleType = ScaleType.FIT_CENTER;
+                    Bitmap transformedBitmap = ImageUtil.transformBitmap(bitmap, options);
 
                     // Store some data we need to access beyond the do{} block
                     rWidth = transformedBitmap.getWidth();

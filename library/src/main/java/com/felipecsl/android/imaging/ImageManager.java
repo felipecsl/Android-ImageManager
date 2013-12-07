@@ -21,6 +21,7 @@ public class ImageManager {
     private static final String TAG = "ImageManager";
     public static final int NO_PLACEHOLDER = -1;
 
+    // TODO: Should be removed once a job is finished
     private static final Map<ImageView, String> runningJobs = Collections.synchronizedMap(new WeakHashMap<ImageView, String>());
     private static CacheManager defaultCacheManager;
     private static final Handler uiHandler = new Handler(Looper.getMainLooper());
@@ -45,15 +46,15 @@ public class ImageManager {
      * Default constructor.
      * <p>
      * Will use the default CacheManager.
-     * 
+     *
      */
     public ImageManager(final Context context) {
         this(context,
-             defaultCacheManager == null
-                     ? (defaultCacheManager = new CacheManager(
-                             Utils.createDefaultBitmapLruCache(),
-                             DiskLruImageCache.getInstance(context)))
-                     : defaultCacheManager);
+                defaultCacheManager == null
+                        ? (defaultCacheManager = new CacheManager(
+                        Utils.createDefaultBitmapLruCache(),
+                        DiskLruImageCache.getInstance(context)))
+                        : defaultCacheManager);
     }
 
     /**
@@ -61,7 +62,7 @@ public class ImageManager {
      * <p>
      * Provide your own custom LruCache if you wish to.
      * <p>
-     * 
+     *
      * @param context
      * @param _cacheManager custom cache manager to be used
      */
@@ -86,7 +87,7 @@ public class ImageManager {
      * <p>
      * Upon completion, assigns the loaded bitmap into the provided imageView object and calls the
      * imageViewCallback with the loaded ImageView object.
-     * 
+     *
      * @param urlString the URL string to load the image from
      * @param imageView the ImageView that will receive the loaded image
      * @param options Load options
@@ -97,7 +98,7 @@ public class ImageManager {
 
         final ImageManager self = this;
 
-        loadImage(urlString, imageView, new CacheManagerCallback() {
+        loadImage(urlString, imageView, options, new CacheManagerCallback() {
             @Override
             public void onBitmapLoaded(final Bitmap bitmap, final LoadedFrom source) {
                 if (bitmap == null) {
@@ -117,7 +118,7 @@ public class ImageManager {
         final ImageManager self = this;
         final String urlString = imageUri.toString();
 
-        loadImage(urlString, imageView, new CacheManagerCallback() {
+        loadImage(urlString, imageView, options, new CacheManagerCallback() {
             @Override
             public void onBitmapLoaded(final Bitmap bitmap, final LoadedFrom source) {
                 if (bitmap == null) {
@@ -130,20 +131,26 @@ public class ImageManager {
         });
     }
 
-    private void loadImage(final String urlString, final ImageView imageView, final CacheManagerCallback callback) {
+    private void loadImage(final String urlString, final ImageView imageView, final JobOptions options, final CacheManagerCallback callback) {
         runningJobs.put(imageView, urlString);
 
         if (placeholderResId != NO_PLACEHOLDER)
             CacheableDrawable.setPlaceholder(imageView, placeholderResId, null);
 
-        cacheManager.get(urlString, callback);
+        cacheManager.get(getCacheKeyForJob(urlString, options), callback);
+    }
+
+    public static String getCacheKeyForJob(final String url, final JobOptions options) {
+        if (options.requestedHeight <= 0 && options.requestedWidth <= 0)
+            return url;
+        return String.format("%s-%sx%s", url, options.requestedWidth, options.requestedHeight);
     }
 
     /**
      * Loads an image from the provided URL and caches it in the manager's LRU and Disk cache.
      * If the image is already cached, fetches it from the cache instead.
      * Calls the BitmapCallback upon completion, with the loaded Bitmap instance.
-     * 
+     *
      * @param urlString the URL string to load the image from
      */
     public void loadImage(final String urlString) {
@@ -179,7 +186,7 @@ public class ImageManager {
 
     /**
      * Private
-     * 
+     *
      * @hide
      */
 

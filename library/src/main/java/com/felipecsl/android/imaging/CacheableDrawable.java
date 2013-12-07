@@ -7,6 +7,8 @@ import android.graphics.Bitmap;
 import android.graphics.Canvas;
 import android.graphics.ColorFilter;
 import android.graphics.Paint;
+import android.graphics.Path;
+import android.graphics.Point;
 import android.graphics.Rect;
 import android.graphics.drawable.BitmapDrawable;
 import android.graphics.drawable.Drawable;
@@ -16,18 +18,22 @@ import android.widget.ImageView;
 import com.felipecsl.android.BuildConfig;
 
 // Took from
-// https://github.com/square/picasso/blob/master/picasso/src/main/java/com/squareup/picasso/PicassoDrawable.java
+// https://github.com/square/picasso/blob/master/picasso/src/main/java/com/squareup/picasso/CacheableDrawable.java
 public final class CacheableDrawable extends Drawable {
     // Only accessed from main thread.
     private static final Paint DEBUG_PAINT = new Paint();
+
     private static final float FADE_DURATION = 200f; // ms
 
     /**
      * Create or update the drawable on the target {@link ImageView} to display the supplied bitmap
      * image.
      */
-    static void setBitmap(final ImageView target, final Context context, final Bitmap bitmap, final LoadedFrom loadedFrom, final boolean noFade) {
-        final CacheableDrawable drawable = new CacheableDrawable(context, target.getDrawable(), bitmap, loadedFrom, noFade);
+    static void setBitmap(final ImageView target, final Context context, final Bitmap bitmap,
+                          final LoadedFrom loadedFrom, final boolean noFade, final boolean debugging) {
+        final Drawable placeholder = target.getDrawable();
+        final CacheableDrawable drawable =
+                new CacheableDrawable(context, placeholder, bitmap, loadedFrom, noFade, debugging);
         target.setImageDrawable(drawable);
     }
 
@@ -43,6 +49,7 @@ public final class CacheableDrawable extends Drawable {
         }
     }
 
+    private final boolean debugging;
     private final float density;
     private final LoadedFrom loadedFrom;
     final BitmapDrawable image;
@@ -51,15 +58,18 @@ public final class CacheableDrawable extends Drawable {
 
     long startTimeMillis;
     boolean animating;
+    int alpha = 0xFF;
 
-    public CacheableDrawable(final Context context, final Drawable placeholder, final Bitmap bitmap, final LoadedFrom loadedFrom, final boolean noFade) {
+    CacheableDrawable(final Context context, final Drawable placeholder, final Bitmap bitmap,
+                      final LoadedFrom loadedFrom, final boolean noFade, final boolean debugging) {
         final Resources res = context.getResources();
 
-        density = res.getDisplayMetrics().density;
+        this.debugging = debugging;
+        this.density = res.getDisplayMetrics().density;
 
         this.loadedFrom = loadedFrom;
 
-        image = new BitmapDrawable(res, bitmap);
+        this.image = new BitmapDrawable(res, bitmap);
 
         final boolean fade = loadedFrom != LoadedFrom.MEMORY && !noFade;
         if (fade) {
@@ -74,26 +84,25 @@ public final class CacheableDrawable extends Drawable {
         if (!animating) {
             image.draw(canvas);
         } else {
-            if (placeholder != null) {
-                placeholder.draw(canvas);
-            }
-
             final float normalized = (SystemClock.uptimeMillis() - startTimeMillis) / FADE_DURATION;
-            final int alpha = (int)(0xFF * normalized);
-
             if (normalized >= 1f) {
                 animating = false;
                 placeholder = null;
                 image.draw(canvas);
             } else {
-                image.setAlpha(alpha);
+                if (placeholder != null) {
+                    placeholder.draw(canvas);
+                }
+
+                final int partialAlpha = (int)(alpha * normalized);
+                image.setAlpha(partialAlpha);
                 image.draw(canvas);
-                image.setAlpha(0xFF);
+                image.setAlpha(alpha);
                 invalidateSelf();
             }
         }
 
-        if (BuildConfig.DEBUG) {
+        if (BuildConfig.DEBUG && debugging) {
             drawDebugIndicator(canvas);
         }
     }
@@ -110,6 +119,7 @@ public final class CacheableDrawable extends Drawable {
 
     @Override
     public void setAlpha(final int alpha) {
+        this.alpha = alpha;
         if (placeholder != null) {
             placeholder.setAlpha(alpha);
         }
@@ -167,22 +177,24 @@ public final class CacheableDrawable extends Drawable {
     }
 
     private void drawDebugIndicator(final Canvas canvas) {
-        canvas.save();
-        canvas.rotate(45);
-
-        // Draw a white square for the indicator border.
         DEBUG_PAINT.setColor(WHITE);
-        canvas.drawRect(0, -10 * density, 7.5f * density, 10 * density, DEBUG_PAINT);
+        Path path = getTrianglePath(new Point(0, 0), (int)(16 * density));
+        canvas.drawPath(path, DEBUG_PAINT);
 
-        // Draw a slightly smaller square for the indicator color.
         DEBUG_PAINT.setColor(loadedFrom.debugColor);
-        canvas.drawRect(0, -9 * density, 6.5f * density, 9 * density, DEBUG_PAINT);
+        path = getTrianglePath(new Point(0, 0), (int)(15 * density));
+        canvas.drawPath(path, DEBUG_PAINT);
+    }
 
-        canvas.restore();
+    private static Path getTrianglePath(final Point p1, final int width) {
+        final Point p2 = new Point(p1.x + width, p1.y);
+        final Point p3 = new Point(p1.x, p1.y + width);
 
-        final Paint paint = new Paint();
-        paint.setColor(loadedFrom.debugColor);
-        paint.setStyle(Paint.Style.STROKE);
-        canvas.drawRect(1 * density, 1 * density, canvas.getWidth(), canvas.getHeight(), paint);
+        final Path path = new Path();
+        path.moveTo(p1.x, p1.y);
+        path.lineTo(p2.x, p2.y);
+        path.lineTo(p3.x, p3.y);
+
+        return path;
     }
 }
