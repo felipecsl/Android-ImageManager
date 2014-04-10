@@ -1,6 +1,8 @@
 Android-ImageManager
 ====================
 
+[DEPRECATED] Use [Picasso]((http://github.com/square/picasso)) instead 
+
 Android-ImageManager handles all the boilerplate code for simple downloading, caching and using images with Android.
 It downloads the images and caches them using an in-memory LRU and a second level Disk cache.
 
